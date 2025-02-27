@@ -6,7 +6,7 @@ to create the user guides and programming references.
 The work was originally published by Kolban, but the repository is now unmaintained at https://github.com/nkolban/esp32-snippets and no longer works with recent IDF updates
 
 # Notes
-The work here was adapted to compile and work with ESP IDF 5.4. I also added some support for ESP32S3, however, the S3 doesn't support PWM at high frequencies, so the PWM module has been disabled. I am not familiar enough with I2S and unable to adapt I2S to the IDF 5.4 or the ESP32S3, so it has also been disabled. WiFi, especially, the module that made me take on this work, has been tested and works well, allowing to switch between AP and STA modes without crashing. Mostly, the rest of the work is as it was, only adapted to renamed or changes structures in the IDF. Help with keeping this current is appreciated.
+The work here was adapted to compile and work with ESP IDF 5.4. I also added some support for ESP32S3, however, the S3 doesn't support PWM at high frequencies, so the PWM module has been disabled. I am not familiar enough with I2S and unable to adapt I2S to the IDF 5.4 or the ESP32S3, so it has also been disabled. WiFi, especially, the module that made me take on this work, has been tested and works well, allowing to switch between AP and STA modes without crashing. Mostly, the rest of the work is as it was, only adapted to renamed or changed structures in the IDF. Help with keeping this current is appreciated.
 
 # Compiling the C++ classes
 The C++ classes found here exist as an ESP-IDF component.  To build the classes and then use them in your project perform the following
