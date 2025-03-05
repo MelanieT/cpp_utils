@@ -21,6 +21,7 @@
 
 #include <cstring>
 #include <utility>
+#include <esp_phy_init.h>
 
 
 static const char* LOG_TAG = "WiFi";
@@ -156,7 +157,10 @@ void WiFi::setDNSServer(int numdns, ip_addr_t ip) {
 uint8_t WiFi::connectAP(const std::string& ssid, const std::string& password, bool waitForConnection, wifi_mode_t mode){
 	ESP_LOGD(LOG_TAG, ">> connectAP");
 
-	m_apConnectionStatus = UINT8_MAX;
+    // If we don't do this, changes in network topology or availability could make the device unconnectable.
+    esp_phy_erase_cal_data_in_nvs();
+
+    m_apConnectionStatus = UINT8_MAX;
 
     init();
     esp_err_t errRc = ::esp_wifi_set_mode(mode);
