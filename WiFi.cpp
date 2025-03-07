@@ -807,9 +807,8 @@ std::string WiFiAPRecord::toString() {
 } // toString
 
 
-/*
 MDNS::MDNS() {
-	esp_err_t errRc = ::mdns_init(TCPIP_ADAPTER_IF_STA, &m_mdns_server);
+	esp_err_t errRc = ::mdns_init();
 	if (errRc != ESP_OK) {
 		ESP_LOGE(LOG_TAG, "mdns_init: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
 		abort();
@@ -817,13 +816,7 @@ MDNS::MDNS() {
 }
 
 
-MDNS::~MDNS() {
-	if (m_mdns_server != nullptr) {
-		mdns_free(m_mdns_server);
-	}
-	m_mdns_server = nullptr;
-}
-*/
+MDNS::~MDNS() = default;
 
 
 /**
@@ -834,9 +827,8 @@ MDNS::~MDNS() {
  * @param [in] port
  * @return N/A.
  */
-/*
-void MDNS::serviceAdd(const std::string& service, const std::string& proto, uint16_t port) {
-	serviceAdd(service.c_str(), proto.c_str(), port);
+void MDNS::serviceAdd(const std::string& instance, const std::string& service, const std::string& proto, uint16_t port) {
+	serviceAdd(instance.c_str(), service.c_str(), proto.c_str(), port);
 } // serviceAdd
 
 
@@ -853,7 +845,6 @@ void MDNS::servicePortSet(const std::string& service, const std::string& proto, 
 void MDNS::serviceRemove(const std::string& service, const std::string& proto) {
 	serviceRemove(service.c_str(), proto.c_str());
 } // serviceRemove
-*/
 
 
 /**
@@ -862,11 +853,9 @@ void MDNS::serviceRemove(const std::string& service, const std::string& proto) {
  * @param [in] hostname The host name to set against the mDNS.
  * @return N/A.
  */
-/*
 void MDNS::setHostname(const std::string& hostname) {
 	setHostname(hostname.c_str());
 } // setHostname
-*/
 
 
 /**
@@ -875,11 +864,9 @@ void MDNS::setHostname(const std::string& hostname) {
  * @param [in] instance The instance name to set against the mDNS.
  * @return N/A.
  */
-/*
 void MDNS::setInstance(const std::string& instance) {
 	setInstance(instance.c_str());
 } // setInstance
-*/
 
 
 /**
@@ -890,9 +877,8 @@ void MDNS::setInstance(const std::string& instance) {
  * @param [in] port
  * @return N/A.
  */
-/*
-void MDNS::serviceAdd(const char* service, const char* proto, uint16_t port) {
-	esp_err_t errRc = ::mdns_service_add(m_mdns_server, service, proto, port);
+void MDNS::serviceAdd(const char *instance, const char* service, const char* proto, uint16_t port) {
+	esp_err_t errRc = ::mdns_service_add(instance, service, proto, port, nullptr, 0);
  	if (errRc != ESP_OK) {
  		ESP_LOGE(LOG_TAG, "mdns_service_add: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
  		abort();
@@ -901,7 +887,7 @@ void MDNS::serviceAdd(const char* service, const char* proto, uint16_t port) {
 
 
 void MDNS::serviceInstanceSet(const char* service, const char* proto, const char* instance) {
-  esp_err_t errRc = ::mdns_service_instance_set(m_mdns_server, service, proto, instance);
+  esp_err_t errRc = ::mdns_service_subtype_add_for_host(nullptr, service, proto, nullptr, instance);
   if (errRc != ESP_OK) {
   	ESP_LOGE(LOG_TAG, "mdns_service_instance_set: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
   	abort();
@@ -910,7 +896,7 @@ void MDNS::serviceInstanceSet(const char* service, const char* proto, const char
 
 
 void MDNS::servicePortSet(const char* service, const char* proto, uint16_t port) {
-  esp_err_t errRc = ::mdns_service_port_set(m_mdns_server, service, proto, port);
+  esp_err_t errRc = ::mdns_service_port_set(service, proto, port);
   if (errRc != ESP_OK) {
   	ESP_LOGE(LOG_TAG, "mdns_service_port_set: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
   	abort();
@@ -919,13 +905,12 @@ void MDNS::servicePortSet(const char* service, const char* proto, uint16_t port)
 
 
 void MDNS::serviceRemove(const char* service, const char* proto) {
-	esp_err_t errRc = ::mdns_service_remove(m_mdns_server, service, proto);
+	esp_err_t errRc = ::mdns_service_remove(service, proto);
 	if (errRc != ESP_OK) {
 		ESP_LOGE(LOG_TAG, "mdns_service_remove: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
 		abort();
 	}
 } // serviceRemove
-*/
 
 
 /**
@@ -934,15 +919,13 @@ void MDNS::serviceRemove(const char* service, const char* proto) {
  * @param [in] hostname The host name to set against the mDNS.
  * @return N/A.
  */
-/*
 void MDNS::setHostname(const char* hostname) {
-  esp_err_t errRc = ::mdns_set_hostname(m_mdns_server,hostname);
+  esp_err_t errRc = ::mdns_hostname_set(hostname);
 	if (errRc != ESP_OK) {
 		ESP_LOGE(LOG_TAG, "mdns_set_hostname: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
 		abort();
 	}
 } // setHostname
-*/
 
 
 /**
@@ -951,12 +934,10 @@ void MDNS::setHostname(const char* hostname) {
  * @param [in] instance The instance name to set against the mDNS.
  * @return N/A.
  */
-/*
 void MDNS::setInstance(const char* instance) {
-	esp_err_t errRc = ::mdns_set_instance(m_mdns_server, instance);
+	esp_err_t errRc = ::mdns_instance_name_set(instance);
 	if (errRc != ESP_OK) {
 		ESP_LOGE(LOG_TAG, "mdns_set_instance: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
 		abort();
 	}
 } // setInstance
-*/

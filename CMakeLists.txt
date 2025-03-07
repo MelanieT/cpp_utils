@@ -8,6 +8,7 @@ set(COMPONENT_REQUIRES
   "esp_ringbuf"
   "mbedtls"
   "esp_wifi"
+  "esp_timer"
   "driver"
 )
 set(COMPONENT_PRIV_REQUIRES )
