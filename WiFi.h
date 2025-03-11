@@ -121,7 +121,7 @@ private:
     esp_netif_t *       staInterface;
     esp_netif_t *       apInterface;
     std::string         m_stationHostname;
-    bool                m_wifiStarted;
+    wifi_mode_t         m_wifiMode = WIFI_MODE_NULL;
 
 public:
 	WiFi();
@@ -134,7 +134,8 @@ public:
 	void                      setDNSServer(int numdns, ip_addr_t ip);
 	static struct in_addr     getHostByName(const std::string& hostName);
 	static struct in_addr     getHostByName(const char* hostName);
-	uint8_t                   connectAP(const std::string& ssid, const std::string& password, bool waitForConnection = true, wifi_mode_t mode = WIFI_MODE_STA);
+	esp_err_t                 connectSTA(const std::string& ssid, const std::string& password, bool waitForConnection = true);
+    esp_err_t                 disconnectSTA();
 	static void               dump();
 	[[nodiscard]] bool        isConnectedToAP() const;
     esp_netif_t *             getStationIf();
@@ -157,6 +158,7 @@ public:
 	std::vector<WiFiAPRecord> scan();
 	void                      startAP(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth = WIFI_AUTH_OPEN);
 	void                      startAP(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth, uint8_t channel, bool ssid_hidden, uint8_t max_connection);
+    void                      stopAP();
 	void                      setIPInfo(const std::string& ip, const std::string& gw, const std::string& netmask);
 	void                      setIPInfo(const char* ip, const char* gw, const char* netmask);
 	void                      setIPInfo(uint32_t ip, uint32_t gw, uint32_t netmask);
