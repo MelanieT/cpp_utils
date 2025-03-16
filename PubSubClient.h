@@ -105,7 +105,9 @@ struct mqtt_message {
 	uint16_t msgId;
 };
 
+#ifndef MQTT_CALLBACK_SIGNATURE
 #define MQTT_CALLBACK_SIGNATURE void (*callback) (std::string, std::string)
+#endif
 
 class PubSubClientTask;
 
