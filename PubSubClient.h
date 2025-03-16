@@ -12,6 +12,7 @@
 #include <string>
 #include "Socket.h"
 #include "FreeRTOSTimer.h"
+#include <functional>
 
 #define MQTT_VERSION_3_1      3
 #define MQTT_VERSION_3_1_1    4
