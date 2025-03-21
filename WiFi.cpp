@@ -102,7 +102,7 @@ void WiFi::addDNSServer(ip_addr_t ip)
 {
     ESP_LOGD(LOG_TAG, "Setting DNS[%d] to %d.%d.%d.%d", m_dnsCount, ((uint8_t *) (&ip))[0], ((uint8_t *) (&ip))[1],
              ((uint8_t *) (&ip))[2], ((uint8_t *) (&ip))[3]);
-    init();
+    init(WIFI_MODE_STA);
     ::dns_setserver(m_dnsCount, &ip);
     m_dnsCount++;
     m_dnsCount %= 2;
@@ -145,7 +145,7 @@ void WiFi::setDNSServer(int numdns, ip_addr_t ip)
 {
     ESP_LOGD(LOG_TAG, "Setting DNS[%d] to %d.%d.%d.%d", m_dnsCount, ((uint8_t *) (&ip))[0], ((uint8_t *) (&ip))[1],
              ((uint8_t *) (&ip))[2], ((uint8_t *) (&ip))[3]);
-    init();
+    init(WIFI_MODE_STA);
     ::dns_setserver(numdns, &ip);
 } // setDNSServer
 
@@ -163,7 +163,7 @@ void WiFi::setDNSServer(int numdns, ip_addr_t ip)
  */
 esp_err_t WiFi::connectSTA(const std::string &ssid, const std::string &password, bool waitForConnection)
 {
-    init();
+    init((wifi_mode_t )(m_wifiMode | WIFI_MODE_STA));
 
     ESP_LOGD(LOG_TAG, ">> connectAP");
 
@@ -540,7 +540,7 @@ std::string WiFi::getStaSSID()
 /**
  * @brief Initialize WiFi.
  */
-/* PRIVATE */ void WiFi::init()
+/* PRIVATE */ void WiFi::init(wifi_mode_t mode)
 {
     // If we have already started the event loop, then change the handler otherwise
     // start the event loop.
@@ -586,7 +586,7 @@ std::string WiFi::getStaSSID()
         apInterface = esp_netif_create_default_wifi_ap();
         assert(apInterface);
 
-        esp_wifi_set_mode(WIFI_MODE_STA);
+        esp_wifi_set_mode(mode);
 
         errRc = ::esp_wifi_start();
         if (errRc != ESP_OK)
@@ -597,7 +597,6 @@ std::string WiFi::getStaSSID()
     }
     m_initCalled = true;
 } // init
-
 
 /**
  * @brief Perform a WiFi scan looking for access points.
@@ -614,9 +613,9 @@ std::vector<WiFiAPRecord> WiFi::scan()
     ESP_LOGD(LOG_TAG, ">> scan");
     std::vector<WiFiAPRecord> apRecords;
 
-    init();
+    init((wifi_mode_t )(m_wifiMode | WIFI_MODE_STA));
 
-    esp_err_t errRc = ::esp_wifi_set_mode(WIFI_MODE_APSTA);
+    esp_err_t errRc = ::esp_wifi_set_mode((wifi_mode_t )(m_wifiMode | WIFI_MODE_STA));
     if (errRc != ESP_OK)
     {
         ESP_LOGE(LOG_TAG, "esp_wifi_set_mode: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
@@ -631,6 +630,9 @@ std::vector<WiFiAPRecord> WiFi::scan()
     if (rc != ESP_OK)
     {
         ESP_LOGE(LOG_TAG, "esp_wifi_scan_start: %d", rc);
+
+        esp_wifi_set_mode(m_wifiMode);
+
         return apRecords;
     }
 
@@ -639,6 +641,7 @@ std::vector<WiFiAPRecord> WiFi::scan()
     if (rc != ESP_OK)
     {
         ESP_LOGE(LOG_TAG, "esp_wifi_scan_get_ap_num: %d", rc);
+        esp_wifi_set_mode(m_wifiMode);
         return apRecords;
     }
     else
@@ -650,6 +653,7 @@ std::vector<WiFiAPRecord> WiFi::scan()
     if (list == nullptr)
     {
         ESP_LOGE(LOG_TAG, "Failed to allocate memory");
+        esp_wifi_set_mode(m_wifiMode);
         return apRecords;
     }
 
@@ -673,6 +677,7 @@ std::vector<WiFiAPRecord> WiFi::scan()
     std::sort(apRecords.begin(),
               apRecords.end(),
               [](const WiFiAPRecord &lhs, const WiFiAPRecord &rhs) { return lhs.m_rssi > rhs.m_rssi; });
+    esp_wifi_set_mode(m_wifiMode);
     return apRecords;
 } // scan
 
@@ -719,7 +724,7 @@ void WiFi::startAP(const std::string &ssid, const std::string &password, wifi_au
 {
     ESP_LOGI(LOG_TAG, ">> startAP: ssid: %s", ssid.c_str());
 
-    init();
+    init((wifi_mode_t)(m_wifiMode | WIFI_MODE_AP));
 
     if (m_wifiMode & WIFI_MODE_AP)
         stopAP();
@@ -752,13 +757,13 @@ void WiFi::startAP(const std::string &ssid, const std::string &password, wifi_au
         abort();
     }
 
-    errRc = esp_netif_dhcps_start(apInterface);
-    if (errRc != ESP_OK)
-    {
-        ESP_LOGE(LOG_TAG, "tcpip_adapter_dhcps_start: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
-    }
-
-    ESP_LOGD(LOG_TAG, "<< startAP");
+//    errRc = esp_netif_dhcps_start(apInterface);
+//    if (errRc != ESP_OK)
+//    {
+//        ESP_LOGE(LOG_TAG, "esp_netif_dhcps_start: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
+//    }
+//
+    ESP_LOGI(LOG_TAG, "<< startAP");
 } // startAP
 
 void WiFi::stopAP()
@@ -850,7 +855,7 @@ void WiFi::setIPInfo(const char *ip, const char *gw, const char *netmask)
  */
 void WiFi::setIPInfo(uint32_t ip, uint32_t gw, uint32_t netmask)
 {
-    init();
+    init((wifi_mode_t)(m_wifiMode | WIFI_MODE_STA));
 
     this->ip = ip;
     this->gw = gw;

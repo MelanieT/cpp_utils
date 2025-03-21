@@ -108,7 +108,7 @@ private:
 class WiFi {
 private:
 	static void         eventHandler(void *ctx, esp_event_base_t base, long event_id, void *event_data);
-	void                init();
+	void                init(wifi_mode_t mode);
 	uint32_t            ip;
 	uint32_t            gw;
 	uint32_t            netmask;
