@@ -7,6 +7,7 @@
 
 //#define _GLIBCXX_USE_C99
 #include <string>
+#include <vector>
 #include <algorithm>
 #include "sdkconfig.h"
 #include "WiFi.h"
@@ -26,6 +27,7 @@
 
 static const char *LOG_TAG = "WiFi";
 
+using namespace std;
 
 /*
 static void setDNSServer(char *ip) {
@@ -560,6 +562,8 @@ std::string WiFi::getStaSSID()
 
     if (!m_initCalled)
     {
+        m_initCalled = true;
+
         ::nvs_flash_init();
         ::esp_netif_init();
 
@@ -595,7 +599,6 @@ std::string WiFi::getStaSSID()
             abort();
         }
     }
-    m_initCalled = true;
 } // init
 
 /**
@@ -649,6 +652,11 @@ std::vector<WiFiAPRecord> WiFi::scan()
         ESP_LOGD(LOG_TAG, "Count of found access points: %d", apCount);
     }
 
+    if (!apCount)
+    {
+        esp_wifi_set_mode(m_wifiMode);
+        return vector<WiFiAPRecord>();
+    }
     auto *list = (wifi_ap_record_t *) malloc(sizeof(wifi_ap_record_t) * apCount);
     if (list == nullptr)
     {
