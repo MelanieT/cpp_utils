@@ -163,11 +163,11 @@ void WiFi::setDNSServer(int numdns, ip_addr_t ip)
  * @param [in] mode WIFI_MODE_AP for normal or WIFI_MODE_APSTA if you want to keep an Access Point running while you connect
  * @return ESP_OK if we are now connected and wifi_err_reason_t if not.
  */
-esp_err_t WiFi::connectSTA(const std::string &ssid, const std::string &password, bool waitForConnection)
+esp_err_t WiFi::connectSTA(const std::string &ssid, const std::string &password, bool waitForConnection, bool testConnection)
 {
     init((wifi_mode_t )(m_wifiMode | WIFI_MODE_STA));
 
-    ESP_LOGD(LOG_TAG, ">> connectAP");
+    ESP_LOGD(LOG_TAG, ">> connectSTA");
 
     if (m_wifiMode & WIFI_MODE_STA)
     {
@@ -202,13 +202,13 @@ esp_err_t WiFi::connectSTA(const std::string &ssid, const std::string &password,
 
     wifi_config_t sta_config;
     ::memset(&sta_config, 0, sizeof(sta_config));
-    ::memcpy(sta_config.sta.ssid, ssid.data(), ssid.size());
-    ::memcpy(sta_config.sta.password, password.data(), password.size());
+    ::strcpy((char *)sta_config.sta.ssid, ssid.c_str());
+    ::strcpy((char *)sta_config.sta.password, password.c_str());
     sta_config.sta.bssid_set = false;
     sta_config.sta.pmf_cfg.capable = true;
     sta_config.sta.pmf_cfg.required = false;
     sta_config.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
-    sta_config.sta.threshold.authmode = WIFI_AUTH_WPA_PSK;
+//    sta_config.sta.threshold.authmode = WIFI_AUTH_WPA_PSK;
     errRc = ::esp_wifi_set_config(WIFI_IF_STA, &sta_config);
     if (errRc != ESP_OK)
     {
@@ -225,9 +225,10 @@ esp_err_t WiFi::connectSTA(const std::string &ssid, const std::string &password,
             abort();
         }
 
-        return m_apConnectionStatus;
+        return m_apConnectionStatus; // Somewhat meaningless here
     }
 
+    m_testConnection = testConnection;
     m_connectFinished.take("connectAP");   // Take the semaphore to wait for a connection.
     do
     {
@@ -235,10 +236,38 @@ esp_err_t WiFi::connectSTA(const std::string &ssid, const std::string &password,
         errRc = ::esp_wifi_connect();
         if (errRc != ESP_OK)
         {
+            // There will be no connected event. Give the semaphore back.
+            m_connectFinished.give();
+            m_testConnection = false;
             ESP_LOGE(LOG_TAG, "esp_wifi_connect: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
-            abort();
+            return errRc;
         }
-    } while (!m_connectFinished.take(5000, "connectAP")); // retry if not connected within 5s
+
+        // Here we try to take the semaphore again. This will only succeed when the
+        // wifi event handler has given it.
+        if (m_connectFinished.take(5000, "connectAP"))
+            break;
+
+    } while (!m_testConnection); // retry if not connected within 5s and not just testing
+    // Have to give it again for next time.
+
+    if (m_testConnection)
+    {
+        esp_err_t ret = m_apConnectionStatus;
+        // We still hold the semaphore, disconnect the test connection
+        disconnectSTA();
+        // Wait for it to happen
+        while(m_connectFinished.take(5000, "connectAP"))
+            ;
+
+        m_testConnection = false;
+
+        m_connectFinished.give();
+
+        m_apConnectionStatus = UINT8_MAX;
+
+        return ret;
+    }
     m_connectFinished.give();
 
     ESP_LOGD(LOG_TAG, "<< connectAP");
@@ -544,14 +573,9 @@ std::string WiFi::getStaSSID()
  */
 /* PRIVATE */ void WiFi::init(wifi_mode_t mode)
 {
-    // If we have already started the event loop, then change the handler otherwise
-    // start the event loop.
-    if (m_eventLoopStarted)
-    {
-        esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, WiFi::eventHandler, this);
-        esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, WiFi::eventHandler, this);
-    }
-    else
+    // The new architecture of the SDK features multiple handlers. Re-setting them can cause
+    // a silent hang, and isn't useful anyway.
+    if (!m_eventLoopStarted)
     {
         esp_event_loop_create_default();
         esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, WiFi::eventHandler, this);

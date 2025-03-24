@@ -122,6 +122,7 @@ private:
     esp_netif_t *       apInterface;
     std::string         m_stationHostname;
     wifi_mode_t         m_wifiMode = WIFI_MODE_NULL;
+    bool                m_testConnection = false; // For testing wifi credentials
 
 public:
 	WiFi();
@@ -134,7 +135,7 @@ public:
 	void                      setDNSServer(int numdns, ip_addr_t ip);
 	static struct in_addr     getHostByName(const std::string& hostName);
 	static struct in_addr     getHostByName(const char* hostName);
-	esp_err_t                 connectSTA(const std::string& ssid, const std::string& password, bool waitForConnection = true);
+	esp_err_t                 connectSTA(const std::string& ssid, const std::string& password, bool waitForConnection = true, bool testConnection = false);
     esp_err_t                 disconnectSTA();
 	static void               dump();
 	[[nodiscard]] bool        isConnectedToAP() const;
