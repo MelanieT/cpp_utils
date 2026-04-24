@@ -12,6 +12,7 @@
 #include <string>
 #include "Socket.h"
 #include "FreeRTOSTimer.h"
+#include <functional>
 
 #define MQTT_VERSION_3_1      3
 #define MQTT_VERSION_3_1_1    4
@@ -105,7 +106,9 @@ struct mqtt_message {
 	uint16_t msgId;
 };
 
+#ifndef MQTT_CALLBACK_SIGNATURE
 #define MQTT_CALLBACK_SIGNATURE void (*callback) (std::string, std::string)
+#endif
 
 class PubSubClientTask;
 

@@ -20,12 +20,11 @@
 /**
  * @brief Manage mDNS server.
  */
-/*
 class MDNS {
 public:
 	MDNS();
 	~MDNS();
-	void serviceAdd(const std::string& service, const std::string& proto, uint16_t port);
+    void serviceAdd(const std::string& instance, const std::string& service, const std::string& proto, uint16_t port);
 	void serviceInstanceSet(const std::string& service, const std::string& proto, const std::string& instance);
 	void servicePortSet(const std::string& service, const std::string& proto, uint16_t port);
 	void serviceRemove(const std::string& service, const std::string& proto);
@@ -33,7 +32,7 @@ public:
 	void setInstance(const std::string& instance);
 	// If we the above functions with a basic char*, a copy would be created into an std::string,
 	// making the whole thing require twice as much processing power and speed
-	void serviceAdd(const char* service, const char* proto, uint16_t port);
+	void serviceAdd(const char *instance, const char* service, const char* proto, uint16_t port);
 	void serviceInstanceSet(const char* service, const char* proto, const char* instance);
 	void servicePortSet(const char* service, const char* proto, uint16_t port);
 	void serviceRemove(const char* service, const char* proto);
@@ -41,10 +40,7 @@ public:
 	void setInstance(const char* instance);
 
 private:
-	mdns_server_t* m_mdns_server = nullptr;
-
 };
-*/
 
 class WiFiAPRecord {
 public:
@@ -112,20 +108,21 @@ private:
 class WiFi {
 private:
 	static void         eventHandler(void *ctx, esp_event_base_t base, long event_id, void *event_data);
-	void                init();
+	void                init(wifi_mode_t mode);
 	uint32_t            ip;
 	uint32_t            gw;
 	uint32_t            netmask;
 	WiFiEventHandler*   m_pWifiEventHandler;
 	uint8_t             m_dnsCount = 0;
-	bool                m_eventLoopStarted;
-	bool                m_initCalled;
+	volatile bool       m_eventLoopStarted;
+	volatile bool       m_initCalled;
 	uint8_t             m_apConnectionStatus;   // ESP_OK = we are connected to an access point.  Otherwise receives wifi_err_reason_t.
   	FreeRTOS::Semaphore m_connectFinished = FreeRTOS::Semaphore("ConnectFinished");
     esp_netif_t *       staInterface;
     esp_netif_t *       apInterface;
     std::string         m_stationHostname;
-    bool                m_wifiStarted;
+    wifi_mode_t         m_wifiMode = WIFI_MODE_NULL;
+    bool                m_testConnection = false; // For testing wifi credentials
 
 public:
 	WiFi();
@@ -138,7 +135,8 @@ public:
 	void                      setDNSServer(int numdns, ip_addr_t ip);
 	static struct in_addr     getHostByName(const std::string& hostName);
 	static struct in_addr     getHostByName(const char* hostName);
-	uint8_t                   connectAP(const std::string& ssid, const std::string& password, bool waitForConnection = true, wifi_mode_t mode = WIFI_MODE_STA);
+	esp_err_t                 connectSTA(const std::string& ssid, const std::string& password, bool waitForConnection = true, bool testConnection = false);
+    esp_err_t                 disconnectSTA();
 	static void               dump();
 	[[nodiscard]] bool        isConnectedToAP() const;
     esp_netif_t *             getStationIf();
@@ -161,6 +159,7 @@ public:
 	std::vector<WiFiAPRecord> scan();
 	void                      startAP(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth = WIFI_AUTH_OPEN);
 	void                      startAP(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth, uint8_t channel, bool ssid_hidden, uint8_t max_connection);
+    void                      stopAP();
 	void                      setIPInfo(const std::string& ip, const std::string& gw, const std::string& netmask);
 	void                      setIPInfo(const char* ip, const char* gw, const char* netmask);
 	void                      setIPInfo(uint32_t ip, uint32_t gw, uint32_t netmask);
