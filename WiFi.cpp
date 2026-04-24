@@ -276,6 +276,7 @@ bool WiFi::isConnectedToAP() const {
     }
     else if(base == IP_EVENT) {
         if (event_id == IP_EVENT_STA_GOT_IP) {
+        	esp_wifi_set_mode(WIFI_MODE_STA); // Shut off the AP
             pWiFi->m_apConnectionStatus = ESP_OK;
             pWiFi->m_connectFinished.give();
         }
