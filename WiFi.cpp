@@ -160,7 +160,9 @@ void WiFi::setDNSServer(int numdns, ip_addr_t ip)
  * @param [in] ssid The network SSID of the access point to which we wish to connect.
  * @param [in] password The password of the access point to which we wish to connect.
  * @param [in] waitForConnection Block until the connection has an outcome.
- * @param [in] mode WIFI_MODE_AP for normal or WIFI_MODE_APSTA if you want to keep an Access Point running while you connect
+ * @param [in] testConnection Only test the credentials: a single attempt, disconnected again afterwards.
+ *
+ * A running Access Point is kept running.
  * @return ESP_OK if we are now connected and wifi_err_reason_t if not.
  */
 esp_err_t WiFi::connectSTA(const std::string &ssid, const std::string &password, bool waitForConnection, bool testConnection)
@@ -357,8 +359,6 @@ bool WiFi::isConnectedToAP() const
     {
         if (event_id == IP_EVENT_STA_GOT_IP)
         {
-            esp_wifi_set_mode(WIFI_MODE_STA); // Shut off the AP
-
             pWiFi->m_apConnectionStatus = ESP_OK;
             pWiFi->m_connectFinished.give();
         }
@@ -796,12 +796,13 @@ void WiFi::startAP(const std::string &ssid, const std::string &password, wifi_au
         abort();
     }
 
-//    errRc = esp_netif_dhcps_start(apInterface);
-//    if (errRc != ESP_OK)
-//    {
-//        ESP_LOGE(LOG_TAG, "esp_netif_dhcps_start: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
-//    }
-//
+    // stopAP() stops the DHCP server, without it a restarted AP hands out no addresses
+    errRc = esp_netif_dhcps_start(apInterface);
+    if (errRc != ESP_OK && errRc != ESP_ERR_ESP_NETIF_DHCP_ALREADY_STARTED)
+    {
+        ESP_LOGE(LOG_TAG, "esp_netif_dhcps_start: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
+    }
+
     ESP_LOGI(LOG_TAG, "<< startAP");
 } // startAP
 
