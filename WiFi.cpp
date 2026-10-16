@@ -202,11 +202,16 @@ esp_err_t WiFi::connectSTA(const std::string &ssid, const std::string &password,
 
     wifi_config_t sta_config;
     ::memset(&sta_config, 0, sizeof(sta_config));
-    ::strcpy((char *)sta_config.sta.ssid, ssid.c_str());
-    ::strcpy((char *)sta_config.sta.password, password.c_str());
+    // Bounded: a maximum length SSID (32) or password (64) has no room for the NUL,
+    // which strcpy wrote past the field. The driver doesn't need it when full.
+    ::strncpy((char *)sta_config.sta.ssid, ssid.c_str(), sizeof(sta_config.sta.ssid));
+    ::strncpy((char *)sta_config.sta.password, password.c_str(), sizeof(sta_config.sta.password));
     sta_config.sta.bssid_set = false;
     sta_config.sta.pmf_cfg.capable = true;
     sta_config.sta.pmf_cfg.required = false;
+    // sort_method only applies to a full scan. The default fast scan joins the first
+    // matching AP it hears, however weak, when several APs share the SSID.
+    sta_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
     sta_config.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
 //    sta_config.sta.threshold.authmode = WIFI_AUTH_WPA_PSK;
     errRc = ::esp_wifi_set_config(WIFI_IF_STA, &sta_config);
@@ -963,6 +968,17 @@ std::string WiFiAPRecord::toString()
     return {info_str};
 } // toString
 
+void WiFi::setMode(wifi_mode_t mode)
+{
+    m_wifiMode = mode;
+    esp_wifi_set_mode(mode);
+}
+
+void WiFi::stop()
+{
+    esp_wifi_stop();
+    m_initCalled = false;
+}
 
 MDNS::MDNS()
 {

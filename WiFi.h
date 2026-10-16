@@ -13,6 +13,7 @@
 #include <vector>
 #include <mdns.h>
 #include <esp_err.h>
+#include <esp_wifi.h>
 #include <lwip/ip_addr.h>
 #include "FreeRTOS.h"
 #include "WiFiEventHandler.h"
@@ -155,6 +156,8 @@ public:
 	std::string               getStaNetmask();
 	std::string               getStaGateway();
     void                      setStationHostname(std::string hostname);
+	void					  setMode(wifi_mode_t mode);
+	void					  stop();
 
 	std::vector<WiFiAPRecord> scan();
 	void                      startAP(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth = WIFI_AUTH_OPEN);
