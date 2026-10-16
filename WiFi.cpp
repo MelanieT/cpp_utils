@@ -621,6 +621,16 @@ std::string WiFi::getStaSSID()
         apInterface = esp_netif_create_default_wifi_ap();
         assert(apInterface);
 
+        // The AP config can only be set with the AP enabled. Before the start that brings
+        // nothing up, so the AP starts with it rather than with defaults.
+        if (m_apConfigSet)
+        {
+            esp_wifi_set_mode(WIFI_MODE_AP);
+            errRc = ::esp_wifi_set_config(WIFI_IF_AP, &m_apConfig);
+            if (errRc != ESP_OK)
+                ESP_LOGE(LOG_TAG, "esp_wifi_set_config: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
+        }
+
         esp_wifi_set_mode(mode);
 
         errRc = ::esp_wifi_start();
@@ -763,6 +773,10 @@ void WiFi::startAP(const std::string &ssid, const std::string &password, wifi_au
 {
     ESP_LOGI(LOG_TAG, ">> startAP: ssid: %s", ssid.c_str());
 
+    setAPConfig(ssid, password, auth, channel, ssid_hidden, max_connection);
+
+    // If this starts the wifi, the AP comes up configured
+    bool started = m_initCalled;
     init((wifi_mode_t)(m_wifiMode | WIFI_MODE_AP));
 
     if (m_wifiMode & WIFI_MODE_AP)
@@ -777,23 +791,23 @@ void WiFi::startAP(const std::string &ssid, const std::string &password, wifi_au
         abort();
     }
 
-    // Build the apConfig structure.
-    wifi_config_t apConfig;
-    ::memset(&apConfig, 0, sizeof(apConfig));
-    ::memcpy(apConfig.ap.ssid, ssid.data(), ssid.size());
-    apConfig.ap.ssid_len = ssid.size();
-    ::memcpy(apConfig.ap.password, password.data(), password.size());
-    apConfig.ap.channel = channel;
-    apConfig.ap.authmode = auth;
-    apConfig.ap.ssid_hidden = (uint8_t) ssid_hidden;
-    apConfig.ap.max_connection = max_connection;
-    apConfig.ap.beacon_interval = 100;
-
-    errRc = ::esp_wifi_set_config(WIFI_IF_AP, &apConfig);
-    if (errRc != ESP_OK)
+    // Setting a config restarts the AP. Only when the AP came up with a different one.
+    wifi_config_t current = {};
+    if (started && (::esp_wifi_get_config(WIFI_IF_AP, &current) != ESP_OK ||
+                    current.ap.ssid_len != m_apConfig.ap.ssid_len ||
+                    memcmp(current.ap.ssid, m_apConfig.ap.ssid, sizeof(current.ap.ssid)) ||
+                    memcmp(current.ap.password, m_apConfig.ap.password, sizeof(current.ap.password)) ||
+                    current.ap.authmode != m_apConfig.ap.authmode ||
+                    (m_apConfig.ap.channel && current.ap.channel != m_apConfig.ap.channel) ||
+                    current.ap.ssid_hidden != m_apConfig.ap.ssid_hidden ||
+                    current.ap.max_connection != m_apConfig.ap.max_connection))
     {
-        ESP_LOGE(LOG_TAG, "esp_wifi_set_config: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
-        abort();
+        errRc = ::esp_wifi_set_config(WIFI_IF_AP, &m_apConfig);
+        if (errRc != ESP_OK)
+        {
+            ESP_LOGE(LOG_TAG, "esp_wifi_set_config: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
+            abort();
+        }
     }
 
     // stopAP() stops the DHCP server, without it a restarted AP hands out no addresses
@@ -805,6 +819,29 @@ void WiFi::startAP(const std::string &ssid, const std::string &password, wifi_au
 
     ESP_LOGI(LOG_TAG, "<< startAP");
 } // startAP
+
+wifi_config_t WiFi::makeAPConfig(const std::string &ssid, const std::string &password, wifi_auth_mode_t auth,
+                                 uint8_t channel, bool ssid_hidden, uint8_t max_connection)
+{
+    wifi_config_t apConfig;
+    ::memset(&apConfig, 0, sizeof(apConfig));
+    ::memcpy(apConfig.ap.ssid, ssid.data(), std::min(ssid.size(), sizeof(apConfig.ap.ssid)));
+    apConfig.ap.ssid_len = std::min(ssid.size(), sizeof(apConfig.ap.ssid));
+    ::memcpy(apConfig.ap.password, password.data(), std::min(password.size(), sizeof(apConfig.ap.password)));
+    apConfig.ap.channel = channel;
+    apConfig.ap.authmode = auth;
+    apConfig.ap.ssid_hidden = (uint8_t) ssid_hidden;
+    apConfig.ap.max_connection = max_connection;
+    apConfig.ap.beacon_interval = 100;
+    return apConfig;
+}
+
+void WiFi::setAPConfig(const std::string &ssid, const std::string &password, wifi_auth_mode_t auth, uint8_t channel,
+                       bool ssid_hidden, uint8_t max_connection)
+{
+    m_apConfig = makeAPConfig(ssid, password, auth, channel, ssid_hidden, max_connection);
+    m_apConfigSet = true;
+}
 
 void WiFi::stopAP()
 {

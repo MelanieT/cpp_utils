@@ -124,6 +124,9 @@ private:
     std::string         m_stationHostname;
     wifi_mode_t         m_wifiMode = WIFI_MODE_NULL;
     bool                m_testConnection = false; // For testing wifi credentials
+    wifi_config_t       m_apConfig = {};
+    bool                m_apConfigSet = false;
+    static wifi_config_t makeAPConfig(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth, uint8_t channel, bool ssid_hidden, uint8_t max_connection);
 
 public:
 	WiFi();
@@ -163,6 +166,9 @@ public:
 	void                      startAP(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth = WIFI_AUTH_OPEN);
 	void                      startAP(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth, uint8_t channel, bool ssid_hidden, uint8_t max_connection);
     void                      stopAP();
+	// The access point startAP() will use. Set before the wifi starts, the AP comes up
+	// with it right away, rather than first with defaults and then again.
+	void                      setAPConfig(const std::string& ssid, const std::string& passwd, wifi_auth_mode_t auth = WIFI_AUTH_OPEN, uint8_t channel = 0, bool ssid_hidden = false, uint8_t max_connection = 4);
 	void                      setIPInfo(const std::string& ip, const std::string& gw, const std::string& netmask);
 	void                      setIPInfo(const char* ip, const char* gw, const char* netmask);
 	void                      setIPInfo(uint32_t ip, uint32_t gw, uint32_t netmask);
